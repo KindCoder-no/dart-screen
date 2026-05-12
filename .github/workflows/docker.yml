@@ -57,5 +57,5 @@ jobs:
           push: true
           pull: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/kcapp-venue-screen:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/kcapp-venue-screen:v${{ steps.version.outputs.version }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/dart-screen:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/dart-screen:v${{ steps.version.outputs.version }}
