@@ -25,11 +25,24 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true, service: 'system-control-backend' });
 });
 
+app.get('/api/version', (_req, res) => {
+  try {
+    const packagePath = path.join(process.cwd(), 'package.json');
+    const packageData = JSON.parse(readFileSync(packagePath, 'utf-8'));
+    res.json({ version: packageData.version });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({ ok: false, error: message });
+  }
+});
+
 app.get('/api/apps', (_req, res) => {
   try {
-    const appsConfigPath = path.join(path.dirname(new URL(import.meta.url).pathname), 'apps-config.json');
-    const appsConfig = JSON.parse(readFileSync(appsConfigPath, 'utf-8'));
-    res.json(appsConfig);
+    // Use config/config.json (works for both docker-compose and local)
+    const configPath = path.join(process.cwd(), 'config', 'config.json');
+    const configData = JSON.parse(readFileSync(configPath, 'utf-8'));
+    const apps = configData.apps || configData;
+    res.json(apps);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     res.status(500).json({ ok: false, error: message });

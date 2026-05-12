@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  dart-screen:
+    image: emresanden/dart-screen:latest
+    container_name: dart-screen
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+    volumes:
+      - ./config:/app/config
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/api/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s

@@ -1,0 +1,28 @@
+{
+  "apps": [
+    {
+      "name": "Autodarts",
+      "url": "https://play.autodarts.io",
+      "icon": "target",
+      "description": "Automatic dart scoring",
+      "color": "from-emerald-500 to-teal-600",
+      "openMode": "iframe"
+    },
+    {
+      "name": "kcapp",
+      "url": "https://darts.sanden.cloud",
+      "icon": "barchart",
+      "description": "Dart statistics & scoring",
+      "color": "from-sky-500 to-blue-600",
+      "openMode": "iframe"
+    },
+    {
+      "name": "Board Manager",
+      "url": "http://localhost:8130",
+      "icon": "monitor",
+      "description": "Board configuration",
+      "color": "from-rose-500 to-red-600",
+      "openMode": "iframe"
+    }
+  ]
+}

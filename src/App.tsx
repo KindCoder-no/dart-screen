@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Target, Monitor, BarChart3, Power, RotateCcw, ExternalLink, ArrowLeft, Cpu, Wifi } from 'lucide-react';
+import { Target, Monitor, BarChart3, Power, RotateCcw, ExternalLink, ArrowLeft, Cpu, Wifi, Check } from 'lucide-react';
+import packageJson from '../package.json';
 
 interface AppLink {
   name: string;
@@ -40,6 +41,15 @@ const getIconComponent = (iconName: string) => {
   return iconMap[iconName] || <Target className="w-8 h-8" />;
 };
 
+const REMOTE_VERSION_URL =
+  'https://api.github.com/repos/KindCoder-no/dart-screen/releases/latest';
+const VERSION_CHECK_INTERVAL_MS = 60 * 60 * 1000;
+
+const installedVersion =
+  typeof packageJson.version === 'string' && packageJson.version.trim() !== ''
+    ? packageJson.version.trim()
+    : '0.0.0';
+
 function App() {
   const [apps, setApps] = useState<AppLink[]>([]);
   const [appsError, setAppsError] = useState<string | null>(null);
@@ -48,6 +58,11 @@ function App() {
   const [actionStatus, setActionStatus] = useState<string | null>(null);
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [statsError, setStatsError] = useState<string | null>(null);
+  const [remoteVersion, setRemoteVersion] = useState<string | null>(null);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [versionCheckError, setVersionCheckError] = useState<string | null>(null);
+  const [isCheckingVersion, setIsCheckingVersion] = useState(false);
+  const [releaseUrl, setReleaseUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchApps = async () => {
@@ -93,6 +108,40 @@ function App() {
 
     // Poll every 5 seconds
     const interval = setInterval(fetchStats, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const checkVersion = async () => {
+    setIsCheckingVersion(true);
+    try {
+      const response = await fetch(REMOTE_VERSION_URL);
+      if (response.ok) {
+        const data = await response.json();
+        const remoteVer = data.tag_name?.replace('v', '') || data.tag_name || 'unknown';
+        setRemoteVersion(remoteVer);
+        setReleaseUrl(data.html_url || null);
+        setVersionCheckError(null);
+
+        // Compare versions: if remote is different from installed, update is available
+        setUpdateAvailable(remoteVer !== installedVersion);
+      } else {
+        setVersionCheckError('Failed to fetch version info');
+      }
+    } catch (error) {
+      setVersionCheckError(
+        error instanceof Error ? error.message : 'Could not check for updates'
+      );
+    } finally {
+      setIsCheckingVersion(false);
+    }
+  };
+
+  useEffect(() => {
+    // Check version on mount
+    checkVersion();
+
+    // Check periodically
+    const interval = setInterval(checkVersion, VERSION_CHECK_INTERVAL_MS);
     return () => clearInterval(interval);
   }, []);
 
@@ -180,9 +229,40 @@ function App() {
               <p className="text-sm text-gray-400">Autodarts Dashboard</p>
             </div>
           </div>
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-xs text-gray-400 ml-1">Online</span>
+          <div className="flex items-center gap-4">
+            {/* Version Info */}
+            <div className="flex items-center gap-2 text-xs">
+              <div className="flex flex-col items-end gap-1">
+                <div className="flex items-center gap-1">
+                  <span className="text-gray-400">v{installedVersion}</span>
+                  {updateAvailable && (
+                    <button
+                      onClick={() => releaseUrl && window.open(releaseUrl, '_blank')}
+                      disabled={isCheckingVersion || !releaseUrl}
+                      className="ml-1 px-2 py-1 bg-amber-500/20 border border-amber-500/50 rounded text-amber-400 hover:bg-amber-500/30 transition-colors text-xs font-medium disabled:opacity-50"
+                      title="Update available - click to visit releases"
+                    >
+                      {remoteVersion && `Update to v${remoteVersion}`}
+                    </button>
+                  )}
+                  {!updateAvailable && remoteVersion && !versionCheckError && (
+                    <span className="flex items-center gap-1 text-green-400">
+                      <Check className="w-3 h-3" />
+                      Latest
+                    </span>
+                  )}
+                  {versionCheckError && !updateAvailable && (
+                    <span className="text-gray-500 text-xs">{versionCheckError}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Online Status */}
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-xs text-gray-400">Online</span>
+            </div>
           </div>
         </div>
       </header>

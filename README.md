@@ -34,6 +34,67 @@ npm run start
 
 In production, Express serves the built frontend from `dist/` and also serves all `/api/*` routes from the same server.
 
+## Docker
+
+### Docker Compose (Recommended)
+
+Using docker-compose is the easiest way to run with config management:
+
+```bash
+docker-compose up -d
+```
+
+This will:
+- Pull the image from Docker Hub (`emresanden/dart-screen`)
+- Start the container on port 3001
+- Mount `./config` folder for configuration
+
+Edit [config/config.json](config/config.json) to customize applications. Changes will be reflected after restarting the container.
+
+### Manual Docker
+
+Pull the image:
+
+```bash
+docker pull emresanden/dart-screen:latest
+```
+
+Run the container:
+
+```bash
+docker run -d \
+  --name dart-screen \
+  -p 3001:3001 \
+  --restart unless-stopped \
+  emresanden/dart-screen:latest
+```
+
+### Build locally
+
+If you want to build from source:
+
+```bash
+docker build -t dart-screen:latest .
+docker run -d \
+  --name dart-screen \
+  -p 3001:3001 \
+  --restart unless-stopped \
+  dart-screen:latest
+```
+
+For system commands (reboot/shutdown) to work inside containers, run with:
+
+```bash
+docker run -d \
+  --name dart-screen \
+  -p 3001:3001 \
+  --privileged \
+  --restart unless-stopped \
+  emresanden/dart-screen:latest
+```
+
+The `--privileged` flag allows the container to execute systemctl commands on the host. Without it, reboot/shutdown will fail.
+
 ## Backend API
 
 - `GET /api/health`
@@ -46,7 +107,11 @@ In production, Express serves the built frontend from `dist/` and also serves al
 
 ### Applications
 
-Edit [backend/apps-config.json](backend/apps-config.json) to add, remove, or modify applications displayed on the dashboard. Each app supports:
+All deployments use [config/config.json](config/config.json) for application configuration. Edit this file to add, remove, or modify applications displayed on the dashboard.
+
+For local development (`npm run dev:full`), `npm start`, or Docker Compose, changes will be reflected after restarting the service.
+
+Each app supports:
 
 - `name` — Display name
 - `url` — Application URL
