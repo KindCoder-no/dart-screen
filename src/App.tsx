@@ -45,6 +45,21 @@ const REMOTE_VERSION_URL =
   'https://api.github.com/repos/KindCoder-no/dart-screen/releases/latest';
 const VERSION_CHECK_INTERVAL_MS = 60 * 60 * 1000;
 
+const normalizeBasePath = (value?: string): string => {
+  if (!value || value.trim() === '') {
+    return '/';
+  }
+
+  const withLeadingSlash = value.startsWith('/') ? value : `/${value}`;
+  return withLeadingSlash.endsWith('/') ? withLeadingSlash : `${withLeadingSlash}/`;
+};
+
+const API_BASE_PATH = `${normalizeBasePath(import.meta.env.VITE_APP_BASE_PATH)}api`;
+const apiUrl = (path: string): string => {
+  const withLeadingSlash = path.startsWith('/') ? path : `/${path}`;
+  return `${API_BASE_PATH}${withLeadingSlash}`;
+};
+
 const installedVersion =
   typeof packageJson.version === 'string' && packageJson.version.trim() !== ''
     ? packageJson.version.trim()
@@ -67,7 +82,7 @@ function App() {
   useEffect(() => {
     const fetchApps = async () => {
       try {
-        const response = await fetch('/api/apps');
+        const response = await fetch(apiUrl('/apps'));
         if (response.ok) {
           const appsConfig: AppConfig[] = await response.json();
           const appsWithIcons: AppLink[] = appsConfig.map((app) => ({
@@ -90,7 +105,7 @@ function App() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch('/api/system/stats');
+        const response = await fetch(apiUrl('/system/stats'));
         if (response.ok) {
           const data = await response.json();
           setStats(data);
@@ -150,7 +165,7 @@ function App() {
     setActionStatus(action === 'reboot' ? 'Rebooting...' : 'Shutting down...');
 
     try {
-      const endpoint = action === 'reboot' ? '/api/system/reboot' : '/api/system/shutdown';
+      const endpoint = action === 'reboot' ? apiUrl('/system/reboot') : apiUrl('/system/shutdown');
 
       const response = await fetch(endpoint, {
         method: 'POST',
