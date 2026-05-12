@@ -9,6 +9,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3001
+      - VITE_KCAPP_API_BASE=/
     volumes:
       - ./config:/app/config
     restart: unless-stopped
