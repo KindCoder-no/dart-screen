@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Target, Monitor, BarChart3, Settings, Power, RotateCcw, ExternalLink, Activity, ArrowLeft } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Target, Monitor, BarChart3, Power, RotateCcw, ExternalLink, ArrowLeft, Cpu, Wifi } from 'lucide-react';
 
 interface AppLink {
   name: string;
@@ -8,6 +8,18 @@ interface AppLink {
   description: string;
   color: string;
   openMode?: 'new-tab' | 'iframe';
+}
+
+interface SystemStats {
+  hostname: string;
+  platform: string;
+  arch: string;
+  cpuModel: string;
+  cpuCount: number;
+  loadAverage: { one: string; five: string; fifteen: string };
+  memory: { total: number; used: number; free: number; usedPercent: string };
+  upTimeString: string;
+  networkInterfaces: { interface: string; ip: string }[];
 }
 
 const apps: AppLink[] = [
@@ -41,6 +53,32 @@ function App() {
   const [embeddedApp, setEmbeddedApp] = useState<AppLink | null>(null);
   const [confirmAction, setConfirmAction] = useState<'reboot' | 'shutdown' | null>(null);
   const [actionStatus, setActionStatus] = useState<string | null>(null);
+  const [stats, setStats] = useState<SystemStats | null>(null);
+  const [statsError, setStatsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await fetch('/api/system/stats');
+        if (response.ok) {
+          const data = await response.json();
+          setStats(data);
+          setStatsError(null);
+        } else {
+          setStatsError('Failed to fetch stats');
+        }
+      } catch {
+        setStatsError('Error fetching stats');
+      }
+    };
+
+    // Fetch immediately
+    fetchStats();
+
+    // Poll every 5 seconds
+    const interval = setInterval(fetchStats, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSystemAction = async (action: 'reboot' | 'shutdown') => {
     setConfirmAction(null);
@@ -182,6 +220,85 @@ function App() {
                 )
               ))}
             </div>
+          </section>
+
+          {/* System Stats */}
+          <section className="mt-10">
+            <h2 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-4">System Status</h2>
+            {stats ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Hostname */}
+                <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                  <p className="text-xs text-gray-400 mb-1">Hostname</p>
+                  <p className="text-lg font-semibold text-white truncate">{stats.hostname}</p>
+                </div>
+
+                {/* Uptime */}
+                <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                  <p className="text-xs text-gray-400 mb-1">Uptime</p>
+                  <p className="text-lg font-semibold text-emerald-400">{stats.upTimeString}</p>
+                </div>
+
+                {/* CPU Usage */}
+                <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Cpu className="w-4 h-4 text-blue-400" />
+                    <p className="text-xs text-gray-400">CPU</p>
+                  </div>
+                  <p className="text-sm text-white truncate">{stats.cpuModel}</p>
+                  <p className="text-xs text-gray-500 mt-1">{stats.cpuCount} cores • Load: {stats.loadAverage.one}</p>
+                </div>
+
+                {/* Memory */}
+                <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                  <p className="text-xs text-gray-400 mb-2">Memory</p>
+                  <div className="mb-2 h-2 bg-gray-800 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-sky-500 to-sky-400"
+                      style={{ width: `${stats.memory.usedPercent}%` }}
+                    />
+                  </div>
+                  <p className="text-sm text-white">
+                    {Math.round(stats.memory.used / 1024 / 1024 / 1024)} GB / {Math.round(stats.memory.total / 1024 / 1024 / 1024)} GB
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">{stats.memory.usedPercent}% used</p>
+                </div>
+
+                {/* Network */}
+                <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Wifi className="w-4 h-4 text-green-400" />
+                    <p className="text-xs text-gray-400">Network</p>
+                  </div>
+                  <div className="space-y-1">
+                    {stats.networkInterfaces.slice(0, 2).map((iface, idx) => (
+                      <p key={idx} className="text-xs text-white truncate">
+                        <span className="text-gray-500">{iface.interface}:</span> {iface.ip}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+
+                {/* System Info */}
+                <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                  <p className="text-xs text-gray-400 mb-2">System</p>
+                  <p className="text-xs text-white truncate">
+                    <span className="text-gray-500">OS:</span> {stats.platform}
+                  </p>
+                  <p className="text-xs text-white truncate mt-1">
+                    <span className="text-gray-500">Arch:</span> {stats.arch}
+                  </p>
+                </div>
+              </div>
+            ) : statsError ? (
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 text-center">
+                <p className="text-sm text-gray-400">{statsError}</p>
+              </div>
+            ) : (
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 text-center">
+                <p className="text-sm text-gray-400">Loading system stats...</p>
+              </div>
+            )}
           </section>
 
           {/* System Controls */}

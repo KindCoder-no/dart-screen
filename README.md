@@ -26,6 +26,22 @@ npm run dev:full
 
 Frontend runs on port `5173` and proxies `/api/*` to backend on port `3001`.
 
+## Production
+
+Build frontend assets:
+
+```bash
+npm run build
+```
+
+Start Express in production mode:
+
+```bash
+npm run start
+```
+
+In production, Express serves the built frontend from `dist/` and also serves all `/api/*` routes from the same server.
+
 ## Backend API
 
 - `GET /api/health`
