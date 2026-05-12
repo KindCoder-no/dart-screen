@@ -54,7 +54,23 @@ const normalizeBasePath = (value?: string): string => {
   return withLeadingSlash.endsWith('/') ? withLeadingSlash : `${withLeadingSlash}/`;
 };
 
-const API_BASE_PATH = `${normalizeBasePath(import.meta.env.VITE_APP_BASE_PATH)}api`;
+const inferRuntimeBasePath = (): string => {
+  if (typeof window === 'undefined') {
+    return '/';
+  }
+
+  const path = window.location.pathname;
+  const segments = path.split('/').filter(Boolean);
+
+  // Keep the first segment as app base (e.g. /test/).
+  return segments.length > 0 ? `/${segments[0]}/` : '/';
+};
+
+const configuredBasePath = import.meta.env.VITE_APP_BASE_PATH;
+const viteBasePath = import.meta.env.BASE_URL;
+const fallbackBasePath = viteBasePath && viteBasePath !== './' ? viteBasePath : inferRuntimeBasePath();
+
+const API_BASE_PATH = `${normalizeBasePath(configuredBasePath || fallbackBasePath)}api`;
 const apiUrl = (path: string): string => {
   const withLeadingSlash = path.startsWith('/') ? path : `/${path}`;
   return `${API_BASE_PATH}${withLeadingSlash}`;
