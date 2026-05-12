@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import { execFile } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import os from 'node:os';
@@ -23,6 +23,17 @@ async function runSystemctlCommand(action) {
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, service: 'system-control-backend' });
+});
+
+app.get('/api/apps', (_req, res) => {
+  try {
+    const appsConfigPath = path.join(path.dirname(new URL(import.meta.url).pathname), 'apps-config.json');
+    const appsConfig = JSON.parse(readFileSync(appsConfigPath, 'utf-8'));
+    res.json(appsConfig);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({ ok: false, error: message });
+  }
 });
 
 app.get('/api/system/stats', (_req, res) => {

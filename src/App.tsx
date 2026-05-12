@@ -10,6 +10,15 @@ interface AppLink {
   openMode?: 'new-tab' | 'iframe';
 }
 
+interface AppConfig {
+  name: string;
+  url: string;
+  icon: string;
+  description: string;
+  color: string;
+  openMode?: 'new-tab' | 'iframe';
+}
+
 interface SystemStats {
   hostname: string;
   platform: string;
@@ -22,39 +31,46 @@ interface SystemStats {
   networkInterfaces: { interface: string; ip: string }[];
 }
 
-const apps: AppLink[] = [
-  {
-    name: 'Autodarts',
-    url: 'https://play.autodarts.io',
-    icon: <Target className="w-8 h-8" />,
-    description: 'Automatic dart scoring',
-    color: 'from-emerald-500 to-teal-600',
-    openMode: 'iframe',
-  },
-  {
-    name: 'kcapp',
-    url: 'https://darts.sanden.cloud',
-    icon: <BarChart3 className="w-8 h-8" />,
-    description: 'Dart statistics & scoring',
-    color: 'from-sky-500 to-blue-600',
-    openMode: 'iframe',
-  },
-  {
-    name: 'Board Manager',
-    url: 'http://localhost:8130',
-    icon: <Monitor className="w-8 h-8" />,
-    description: 'Board configuration',
-    color: 'from-rose-500 to-red-600',
-    openMode: 'iframe',
-  }
-];
+const getIconComponent = (iconName: string) => {
+  const iconMap: { [key: string]: React.ReactNode } = {
+    target: <Target className="w-8 h-8" />,
+    barchart: <BarChart3 className="w-8 h-8" />,
+    monitor: <Monitor className="w-8 h-8" />,
+  };
+  return iconMap[iconName] || <Target className="w-8 h-8" />;
+};
 
 function App() {
+  const [apps, setApps] = useState<AppLink[]>([]);
+  const [appsError, setAppsError] = useState<string | null>(null);
   const [embeddedApp, setEmbeddedApp] = useState<AppLink | null>(null);
   const [confirmAction, setConfirmAction] = useState<'reboot' | 'shutdown' | null>(null);
   const [actionStatus, setActionStatus] = useState<string | null>(null);
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [statsError, setStatsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchApps = async () => {
+      try {
+        const response = await fetch('/api/apps');
+        if (response.ok) {
+          const appsConfig: AppConfig[] = await response.json();
+          const appsWithIcons: AppLink[] = appsConfig.map((app) => ({
+            ...app,
+            icon: getIconComponent(app.icon),
+          }));
+          setApps(appsWithIcons);
+          setAppsError(null);
+        } else {
+          setAppsError('Failed to fetch apps');
+        }
+      } catch {
+        setAppsError('Error fetching apps');
+      }
+    };
+
+    fetchApps();
+  }, []);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -177,43 +193,49 @@ function App() {
           {/* App Grid */}
           <section>
             <h2 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-4">Applications</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {apps.map((app) => (
-                app.openMode === 'iframe' ? (
-                  <button
-                    key={app.name}
-                    onClick={() => setEmbeddedApp(app)}
-                    className="group relative text-left bg-gray-900 border border-gray-800 rounded-2xl p-5 hover:border-gray-700 transition-all duration-200 hover:shadow-lg hover:shadow-black/20 hover:-translate-y-0.5"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${app.color} flex items-center justify-center text-white shadow-lg`}>
-                        {app.icon}
+            {appsError ? (
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 text-center">
+                <p className="text-sm text-gray-400">{appsError}</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {apps.map((app) => (
+                  app.openMode === 'iframe' ? (
+                    <button
+                      key={app.name}
+                      onClick={() => setEmbeddedApp(app)}
+                      className="group relative text-left bg-gray-900 border border-gray-800 rounded-2xl p-5 hover:border-gray-700 transition-all duration-200 hover:shadow-lg hover:shadow-black/20 hover:-translate-y-0.5"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${app.color} flex items-center justify-center text-white shadow-lg`}>
+                          {app.icon}
+                        </div>
+                        <div className="text-xs font-medium text-gray-500 group-hover:text-gray-400 transition-colors">Embed</div>
                       </div>
-                      <div className="text-xs font-medium text-gray-500 group-hover:text-gray-400 transition-colors">Embed</div>
-                    </div>
-                    <h3 className="font-semibold text-white mb-1">{app.name}</h3>
-                    <p className="text-sm text-gray-400">{app.description}</p>
-                  </button>
-                ) : (
-                  <a
-                    key={app.name}
-                    href={app.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group relative bg-gray-900 border border-gray-800 rounded-2xl p-5 hover:border-gray-700 transition-all duration-200 hover:shadow-lg hover:shadow-black/20 hover:-translate-y-0.5"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${app.color} flex items-center justify-center text-white shadow-lg`}>
-                        {app.icon}
+                      <h3 className="font-semibold text-white mb-1">{app.name}</h3>
+                      <p className="text-sm text-gray-400">{app.description}</p>
+                    </button>
+                  ) : (
+                    <a
+                      key={app.name}
+                      href={app.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group relative bg-gray-900 border border-gray-800 rounded-2xl p-5 hover:border-gray-700 transition-all duration-200 hover:shadow-lg hover:shadow-black/20 hover:-translate-y-0.5"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${app.color} flex items-center justify-center text-white shadow-lg`}>
+                          {app.icon}
+                        </div>
+                        <ExternalLink className="w-4 h-4 text-gray-600 group-hover:text-gray-400 transition-colors" />
                       </div>
-                      <ExternalLink className="w-4 h-4 text-gray-600 group-hover:text-gray-400 transition-colors" />
-                    </div>
-                    <h3 className="font-semibold text-white mb-1">{app.name}</h3>
-                    <p className="text-sm text-gray-400">{app.description}</p>
-                  </a>
-                )
-              ))}
-            </div>
+                      <h3 className="font-semibold text-white mb-1">{app.name}</h3>
+                      <p className="text-sm text-gray-400">{app.description}</p>
+                    </a>
+                  )
+                ))}
+              </div>
+            )}
           </section>
 
           {/* System Stats */}

@@ -37,8 +37,23 @@ In production, Express serves the built frontend from `dist/` and also serves al
 ## Backend API
 
 - `GET /api/health`
+- `GET /api/apps` — Returns list of configured applications
+- `GET /api/system/stats` — Returns system info (hostname, CPU, memory, network)
 - `POST /api/system/reboot`
 - `POST /api/system/shutdown`
+
+## Configuration
+
+### Applications
+
+Edit [backend/apps-config.json](backend/apps-config.json) to add, remove, or modify applications displayed on the dashboard. Each app supports:
+
+- `name` — Display name
+- `url` — Application URL
+- `icon` — Icon name (target, barchart, monitor, etc.)
+- `description` — Short description
+- `color` — Tailwind gradient color class
+- `openMode` — How to open: `iframe` (embedded) or `new-tab` (default)
 
 ## Ubuntu setup for reboot/shutdown
 
