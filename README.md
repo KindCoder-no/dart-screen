@@ -10,14 +10,6 @@ Install dependencies:
 npm install
 ```
 
-Set backend env vars:
-
-```bash
-cp .env.example .env
-```
-
-Set `VITE_SYSTEM_API_TOKEN` to the same value as `SYSTEM_API_TOKEN` so the frontend reboot/shutdown buttons can authenticate against the backend.
-
 Start frontend + backend together:
 
 ```bash
@@ -47,11 +39,6 @@ In production, Express serves the built frontend from `dist/` and also serves al
 - `GET /api/health`
 - `POST /api/system/reboot`
 - `POST /api/system/shutdown`
-
-Protected endpoints require `SYSTEM_API_TOKEN`, sent as either:
-
-- `x-api-key: <token>`
-- `Authorization: Bearer <token>`
 
 ## Ubuntu setup for reboot/shutdown
 

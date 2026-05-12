@@ -16,31 +16,6 @@ const distIndexPath = path.join(distPath, 'index.html');
 
 app.use(express.json());
 
-function requireApiToken(req, res, next) {
-  const configuredToken = process.env.SYSTEM_API_TOKEN;
-
-  if (!configuredToken) {
-    return res.status(500).json({
-      ok: false,
-      error: 'SYSTEM_API_TOKEN is not configured on the server.',
-    });
-  }
-
-  const headerToken = req.header('x-api-key');
-  const authHeader = req.header('authorization');
-  const bearerToken = authHeader?.startsWith('Bearer ')
-    ? authHeader.slice('Bearer '.length)
-    : undefined;
-
-  const incomingToken = headerToken || bearerToken;
-
-  if (!incomingToken || incomingToken !== configuredToken) {
-    return res.status(401).json({ ok: false, error: 'Unauthorized.' });
-  }
-
-  next();
-}
-
 async function runSystemctlCommand(action) {
   // Use non-interactive sudo and fixed args to avoid password prompts and injection.
   return execFileAsync('sudo', ['-n', '/usr/bin/systemctl', action]);
@@ -124,7 +99,7 @@ function formatUptime(seconds) {
   return `${minutes}m`;
 }
 
-app.post('/api/system/reboot', requireApiToken, async (_req, res) => {
+app.post('/api/system/reboot', async (_req, res) => {
   try {
     await runSystemctlCommand('reboot');
     res.status(202).json({ ok: true, action: 'reboot', accepted: true });
@@ -145,7 +120,7 @@ app.post('/api/system/reboot', requireApiToken, async (_req, res) => {
   }
 });
 
-app.post('/api/system/shutdown', requireApiToken, async (_req, res) => {
+app.post('/api/system/shutdown', async (_req, res) => {
   try {
     await runSystemctlCommand('poweroff');
     res.status(202).json({ ok: true, action: 'shutdown', accepted: true });

@@ -86,16 +86,10 @@ function App() {
 
     try {
       const endpoint = action === 'reboot' ? '/api/system/reboot' : '/api/system/shutdown';
-      const apiToken = import.meta.env.VITE_SYSTEM_API_TOKEN;
-
-      if (!apiToken) {
-        throw new Error('Missing VITE_SYSTEM_API_TOKEN in frontend env.');
-      }
 
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
-          'x-api-key': apiToken,
           'Content-Type': 'application/json',
         },
       });
