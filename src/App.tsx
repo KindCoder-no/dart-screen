@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Target, Monitor, BarChart3, Settings, Power, RotateCcw, ExternalLink, Activity } from 'lucide-react';
+import { Target, Monitor, BarChart3, Settings, Power, RotateCcw, ExternalLink, Activity, ArrowLeft } from 'lucide-react';
 
 interface AppLink {
   name: string;
@@ -7,6 +7,7 @@ interface AppLink {
   icon: React.ReactNode;
   description: string;
   color: string;
+  openMode?: 'new-tab' | 'iframe';
 }
 
 const apps: AppLink[] = [
@@ -16,38 +17,28 @@ const apps: AppLink[] = [
     icon: <Target className="w-8 h-8" />,
     description: 'Automatic dart scoring',
     color: 'from-emerald-500 to-teal-600',
+    openMode: 'iframe',
   },
   {
     name: 'kcapp',
-    url: 'http://localhost:3000',
+    url: 'https://darts.sanden.cloud',
     icon: <BarChart3 className="w-8 h-8" />,
     description: 'Dart statistics & scoring',
     color: 'from-sky-500 to-blue-600',
-  },
-  {
-    name: 'Autodarts Caller',
-    url: 'http://localhost:3001',
-    icon: <Activity className="w-8 h-8" />,
-    description: 'Voice caller integration',
-    color: 'from-amber-500 to-orange-600',
+    openMode: 'iframe',
   },
   {
     name: 'Board Manager',
-    url: 'https://play.autodarts.io/boards',
+    url: 'http://localhost:8130',
     icon: <Monitor className="w-8 h-8" />,
     description: 'Board configuration',
     color: 'from-rose-500 to-red-600',
-  },
-  {
-    name: 'Settings',
-    url: 'http://localhost:3002',
-    icon: <Settings className="w-8 h-8" />,
-    description: 'System configuration',
-    color: 'from-slate-500 to-gray-600',
-  },
+    openMode: 'iframe',
+  }
 ];
 
 function App() {
+  const [embeddedApp, setEmbeddedApp] = useState<AppLink | null>(null);
   const [confirmAction, setConfirmAction] = useState<'reboot' | 'shutdown' | null>(null);
   const [actionStatus, setActionStatus] = useState<string | null>(null);
 
@@ -56,25 +47,76 @@ function App() {
     setActionStatus(action === 'reboot' ? 'Rebooting...' : 'Shutting down...');
 
     try {
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/system-action`;
-      const response = await fetch(apiUrl, {
+      const endpoint = action === 'reboot' ? '/api/system/reboot' : '/api/system/shutdown';
+      const apiToken = import.meta.env.VITE_SYSTEM_API_TOKEN;
+
+      if (!apiToken) {
+        throw new Error('Missing VITE_SYSTEM_API_TOKEN in frontend env.');
+      }
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'x-api-key': apiToken,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ action }),
       });
 
       if (!response.ok) {
-        throw new Error('Command failed');
+        let message = 'Command failed';
+
+        try {
+          const body = await response.json();
+          if (body?.error) {
+            message = String(body.error);
+          }
+        } catch {
+          // Ignore JSON parse issues and keep generic message.
+        }
+
+        throw new Error(message);
       }
-    } catch {
-      setActionStatus('Command sent. Device may be unreachable shortly.');
+
+      setActionStatus(
+        action === 'reboot'
+          ? 'Reboot command accepted. Device may reconnect shortly.'
+          : 'Shutdown command accepted. Device may become unreachable shortly.'
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to send command.';
+      setActionStatus(`Failed: ${message}`);
     }
 
     setTimeout(() => setActionStatus(null), 5000);
   };
+
+  if (embeddedApp) {
+    return (
+      <div className="h-screen bg-gray-950 text-white flex flex-col">
+        <header className="border-b border-gray-800 px-4 py-3 flex items-center gap-3">
+          <button
+            onClick={() => setEmbeddedApp(null)}
+            className="flex items-center gap-2 px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm font-medium text-gray-200 hover:bg-gray-800 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </button>
+          <div className="min-w-0">
+            <p className="text-sm text-gray-400">Embedded App</p>
+            <h2 className="text-base font-semibold truncate">{embeddedApp.name}</h2>
+          </div>
+        </header>
+        <main className="flex-1">
+          <iframe
+            src={embeddedApp.url}
+            title={embeddedApp.name}
+            className="w-full h-full border-0"
+            allow="fullscreen"
+          />
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-950 text-white flex flex-col">
@@ -105,22 +147,39 @@ function App() {
             <h2 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-4">Applications</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {apps.map((app) => (
-                <a
-                  key={app.name}
-                  href={app.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group relative bg-gray-900 border border-gray-800 rounded-2xl p-5 hover:border-gray-700 transition-all duration-200 hover:shadow-lg hover:shadow-black/20 hover:-translate-y-0.5"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${app.color} flex items-center justify-center text-white shadow-lg`}>
-                      {app.icon}
+                app.openMode === 'iframe' ? (
+                  <button
+                    key={app.name}
+                    onClick={() => setEmbeddedApp(app)}
+                    className="group relative text-left bg-gray-900 border border-gray-800 rounded-2xl p-5 hover:border-gray-700 transition-all duration-200 hover:shadow-lg hover:shadow-black/20 hover:-translate-y-0.5"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${app.color} flex items-center justify-center text-white shadow-lg`}>
+                        {app.icon}
+                      </div>
+                      <div className="text-xs font-medium text-gray-500 group-hover:text-gray-400 transition-colors">Embed</div>
                     </div>
-                    <ExternalLink className="w-4 h-4 text-gray-600 group-hover:text-gray-400 transition-colors" />
-                  </div>
-                  <h3 className="font-semibold text-white mb-1">{app.name}</h3>
-                  <p className="text-sm text-gray-400">{app.description}</p>
-                </a>
+                    <h3 className="font-semibold text-white mb-1">{app.name}</h3>
+                    <p className="text-sm text-gray-400">{app.description}</p>
+                  </button>
+                ) : (
+                  <a
+                    key={app.name}
+                    href={app.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group relative bg-gray-900 border border-gray-800 rounded-2xl p-5 hover:border-gray-700 transition-all duration-200 hover:shadow-lg hover:shadow-black/20 hover:-translate-y-0.5"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${app.color} flex items-center justify-center text-white shadow-lg`}>
+                        {app.icon}
+                      </div>
+                      <ExternalLink className="w-4 h-4 text-gray-600 group-hover:text-gray-400 transition-colors" />
+                    </div>
+                    <h3 className="font-semibold text-white mb-1">{app.name}</h3>
+                    <p className="text-sm text-gray-400">{app.description}</p>
+                  </a>
+                )
               ))}
             </div>
           </section>
